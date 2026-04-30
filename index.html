@@ -1285,7 +1285,7 @@
   /* ─── STATE ─── */
   const TOTAL_QUESTIONS = 8;
   const WA_NUMBER = '5213315469295';
-  const SHEETS_URL = 'https://script.google.com/a/macros/grupoglivo.com/s/AKfycbyG3FpGr58zx8_ll9wNtyZOXt44myeXxPE82-dUtT319bLN6MgCoC3gNc9pZqyon6Q/exec';
+  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwWEzRCFSEOxMo5H5T6VxW7_ES2ysV1x3wHR9gIc0gYo-bXVeTeob_QpITUn4Mvg9r3/exec';
 
   let currentStep = 0;
   const answers = {};
@@ -1432,13 +1432,22 @@
       timestamp: new Date().toISOString()
     };
 
-    // Save to Sheets
+    // Save to Sheets — GET con parámetros (compatible con no-cors)
     if (SHEETS_URL !== 'REEMPLAZAR_CON_URL_APPS_SCRIPT') {
-      fetch(SHEETS_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).catch(() => {});
+      const params = new URLSearchParams({
+        nombre:        data.nombre,
+        email:         data.email,
+        telefono:      data.telefono,
+        area:          data.area          || '',
+        sueno_horas:   data.sueno_horas   || '',
+        sueno_calidad: data.sueno_calidad || '',
+        alimentacion:  data.alimentacion  || '',
+        ejercicio:     data.ejercicio     || '',
+        sintoma:       data.sintoma       || '',
+        energia:       data.energia       || '',
+        tiempo:        data.tiempo        || ''
+      });
+      fetch(SHEETS_URL + '?' + params.toString(), { mode: 'no-cors' }).catch(() => {});
     }
 
     // Build WhatsApp URL

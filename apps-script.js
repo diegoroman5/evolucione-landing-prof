@@ -3,92 +3,112 @@
  * ─────────────────────────────────────────────────
  * INSTRUCCIONES DE CONFIGURACIÓN:
  *
- * 1. Abre Google Sheets y crea una hoja nueva
- * 2. Ve a Extensiones → Apps Script
- * 3. Borra el código que aparece y pega TODO este archivo
- * 4. Guarda el proyecto (Ctrl+S)
- * 5. Haz clic en "Implementar" → "Nueva implementación"
- * 6. Tipo: "Aplicación web"
+ * 1. Abre Google Sheets → Extensiones → Apps Script
+ * 2. Borra el código que aparece y pega TODO este archivo
+ * 3. Guarda el proyecto (Ctrl+S)
+ * 4. Haz clic en "Implementar" → "Nueva implementación"
+ * 5. Tipo: "Aplicación web"
  *    - Ejecutar como: "Yo"
  *    - Quién tiene acceso: "Cualquier persona"
- * 7. Haz clic en "Implementar" y autoriza los permisos
- * 8. Copia la URL que aparece (termina en /exec)
- * 9. Pega esa URL en index.html donde dice REEMPLAZAR_CON_URL_APPS_SCRIPT
+ * 6. Haz clic en "Implementar" y autoriza los permisos
+ * 7. Copia la URL que aparece (termina en /exec)
+ * 8. Pégala en index.html donde dice REEMPLAZAR_CON_URL_APPS_SCRIPT
  * ─────────────────────────────────────────────────
  */
 
-// ID de tu Google Sheet (está en la URL: docs.google.com/spreadsheets/d/[ESTE_ID]/edit)
-var SPREADSHEET_ID = 'REEMPLAZAR_CON_ID_DE_TU_SHEET';
+var SPREADSHEET_ID = '1yJg7qO27TCDYy1iJlhsQnir_o4YGEXXjLAP4qWgMQtk';
+var SHEET_NAME     = 'Análisis Inicial';
 
-// Nombre de la hoja donde se guardarán los datos
-var SHEET_NAME = 'Análisis Inicial';
+// ── Función auxiliar: obtiene o crea la hoja con encabezados ──
+function getSheet() {
+  var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow([
+      'Fecha y hora',
+      'Nombre',
+      'Email',
+      'Teléfono',
+      'Área profesional',
+      'Horas de sueño',
+      'Calidad del sueño',
+      'Alimentación',
+      'Ejercicio',
+      'Síntoma principal',
+      'Energía mental',
+      'Tiempo con el problema'
+    ]);
+    sheet.getRange(1, 1, 1, 12)
+      .setFontWeight('bold')
+      .setBackground('#1a1a2e')
+      .setFontColor('#ffffff');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
 
-function doPost(e) {
+// ── Función auxiliar: guarda una fila de datos ──
+function saveRow(data) {
+  var sheet = getSheet();
+  var now   = new Date();
+  var fecha = Utilities.formatDate(now, 'America/Mexico_City', 'dd/MM/yyyy HH:mm:ss');
+  sheet.appendRow([
+    fecha,
+    data.nombre        || '',
+    data.email         || '',
+    data.telefono      || '',
+    data.area          || '',
+    data.sueno_horas   || '',
+    data.sueno_calidad || '',
+    data.alimentacion  || '',
+    data.ejercicio     || '',
+    data.sintoma       || '',
+    data.energia       || '',
+    data.tiempo        || ''
+  ]);
+  sheet.autoResizeColumns(1, 12);
+}
+
+// ── doGet — recibe los datos como parámetros en la URL ──
+// Es el método principal (compatible con fetch no-cors desde sitios estáticos)
+function doGet(e) {
   try {
-    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    var p = e.parameter;
 
-    // Si la hoja no existe, créala con encabezados
-    if (!sheet) {
-      sheet = SpreadsheetApp.openById(SPREADSHEET_ID).insertSheet(SHEET_NAME);
-      sheet.appendRow([
-        'Fecha y hora',
-        'Nombre',
-        'Email',
-        'Teléfono',
-        'Área profesional',
-        'Horas de sueño',
-        'Calidad del sueño',
-        'Alimentación',
-        'Ejercicio',
-        'Síntoma principal',
-        'Energía mental',
-        'Tiempo con el problema'
-      ]);
-      // Formato de encabezados
-      sheet.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#1a1a2e').setFontColor('#ffffff');
-      sheet.setFrozenRows(1);
+    // Si vienen parámetros de un lead, guardar
+    if (p && p.nombre) {
+      saveRow(p);
+      return ContentService
+        .createTextOutput(JSON.stringify({ status: 'success' }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
-    var data = JSON.parse(e.postData.contents);
-
-    // Formatear fecha legible en CDMX
-    var now = new Date();
-    var fechaLegible = Utilities.formatDate(now, 'America/Mexico_City', 'dd/MM/yyyy HH:mm:ss');
-
-    // Agregar fila
-    sheet.appendRow([
-      fechaLegible,
-      data.nombre      || '',
-      data.email       || '',
-      data.telefono    || '',
-      data.area        || '',
-      data.sueno_horas || '',
-      data.sueno_calidad || '',
-      data.alimentacion  || '',
-      data.ejercicio     || '',
-      data.sintoma       || '',
-      data.energia       || '',
-      data.tiempo        || ''
-    ]);
-
-    // Auto-resize columnas
-    sheet.autoResizeColumns(1, 12);
-
+    // Sin parámetros → endpoint de salud
     return ContentService
-      .createTextOutput(JSON.stringify({ status: 'success' }))
+      .createTextOutput(JSON.stringify({ status: 'activo', mensaje: 'Evolucione Apps Script funcionando.' }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    Logger.log('Error: ' + error.toString());
+    Logger.log('Error doGet: ' + error.toString());
     return ContentService
       .createTextOutput(JSON.stringify({ status: 'error', message: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// Endpoint de prueba (GET) — visita la URL para verificar que el script está activo
-function doGet(e) {
-  return ContentService
-    .createTextOutput(JSON.stringify({ status: 'activo', mensaje: 'Evolucione Apps Script funcionando correctamente.' }))
-    .setMimeType(ContentService.MimeType.JSON);
+// ── doPost — fallback por si se usa POST ──
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    saveRow(data);
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'success' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    Logger.log('Error doPost: ' + error.toString());
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', message: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
